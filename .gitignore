@@ -1,0 +1,11 @@
+.idea/
+.gradle/
+out/
+build/
+.idea/
+*.iml
+target/derby*
+*.log
+*.jar
+classpath.txt
+sourcedirs.txt
