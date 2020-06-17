@@ -5,16 +5,18 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 
 
-typealias SmCont = (Any?) -> Unit
-
-object StateMachine {
+object StateMachineWithLoop {
     fun f1(x: Int): Int = x + 1
 
     fun f2(x: Int): Int = x * 10
 
     fun f(x: Int): Int {
         val y = x + 10
-        val z = f1(y)
+        var z0 = 0
+        for (i in 1..10_000) {
+            z0 = f1(y + z0)
+        }
+        val z = z0
         val u = z + 2
         val v = f2(u)
         val w = v + 3
@@ -29,39 +31,19 @@ object StateMachine {
         cont(x * 10)
     }
 
-    // Creates a new state machine lambda at each step. Deep stack.
-    fun fCpsSm0(x: Int, cont: SmCont) {
-        val y = x + 10
-        fun sm(label: Int): SmCont = { input: Any? ->
-            when (label) {
-                0 -> {
-                    f1Cps(y, sm(label + 1))
-                }
-                1 -> {
-                    val z = input as Int
-                    val u = z + 2
-                    f2Cps(u, sm(label + 1))
-                }
-                2 -> {
-                    val v = input as Int
-                    val w = v + 3
-                    cont(w)
-                }
-            }
-        }
-        sm(0)(null)
-    }
-
     // Reuses the same state machine instance at each step. Deep stack.
     fun fCpsSm(x: Int, cont: SmCont) {
         var label: Int = 0
         val y = x + 10
+        var i0 = 0
         val sm = object : SmCont {
             override fun invoke(input: Any?) {
                 when (label) {
                     0 -> {
-                        ++label
-                        f1Cps(y, this)
+                        val z0 = input as Int
+                        ++i0
+                        if (i0 == 10_000) ++label
+                        f1Cps(y + z0, this)
                     }
                     1 -> {
                         val z = input as Int
@@ -77,20 +59,23 @@ object StateMachine {
                 }
             }
         }
-        sm(null)
+        sm(0)
     }
 
     // Reuses the same state machine instance at each step. Shallow stack.
     fun CoroutineScope.fCpsSmLaunch(x: Int, cont: SmCont) {
         var label: Int = 0
+        var i0 = 0
         val sm = object : SmCont {
             override fun invoke(input: Any?) {
                 val self = this
                 when (label) {
                     0 -> {
                         val y = x + 10
-                        ++label
-                        launch { f1Cps(y, self) }
+                        val z0 = input as Int
+                        ++i0
+                        if (i0 == 10_000) ++label
+                        launch { f1Cps(y + z0, self) }
                     }
                     1 -> {
                         val z = input as Int
@@ -106,7 +91,7 @@ object StateMachine {
                 }
             }
         }
-        sm(null)
+        sm(0)
     }
 
     val finalCont: SmCont = { x ->
@@ -118,11 +103,12 @@ object StateMachine {
         println("Direct style")
         println(f(1))
 
-        println("fCpsSm0: Continuation passing style")
-        fCpsSm0(1, finalCont)
-
         println("fCpsSm: Continuation passing style")
-        fCpsSm(1, finalCont)
+        try {
+            fCpsSm(1, finalCont)
+        } catch (e: StackOverflowError) {
+            println(e)
+        }
 
         println("fCpsSmLaunch: Continuation passing style")
         runBlocking { fCpsSmLaunch(1, finalCont) }
