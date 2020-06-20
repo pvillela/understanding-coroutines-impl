@@ -9,6 +9,9 @@ import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.EmptyCoroutineContext
 
 
+/**
+ * Demonstration of continuation passing style with state machines when there are loops involved.
+ */
 object StateMachineWithLoop {
     fun f1(x: Int): Int = x + 1
 
@@ -37,7 +40,7 @@ object StateMachineWithLoop {
 
     // Reuses the same state machine instance at each step. Deep stack.
     fun fCpsSm(x: Int, cont: SmCont) {
-        var label: Int = 0
+        var label = 0
         val y = x + 10
         var i0 = 0
         val sm = object : SmCont {
@@ -68,7 +71,7 @@ object StateMachineWithLoop {
 
     // Reuses the same state machine instance at each step. Shallow stack.
     fun CoroutineScope.fCpsSmLaunch(x: Int, cont: SmCont) {
-        var label: Int = 0
+        var label = 0
         var i0 = 0
         val sm = object : SmCont {
             override fun invoke(input: Any?) {
@@ -99,7 +102,7 @@ object StateMachineWithLoop {
     }
 
     fun fCpsSmCoroutine(context: CoroutineContext, x: Int, cont: SmCont) {
-        var label: Int = 0
+        var label = 0
         var i0 = 0
         val sm = object : SmCont {
             override fun invoke(input: Any?) {

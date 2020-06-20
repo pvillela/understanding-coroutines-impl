@@ -3,6 +3,9 @@ package coroutinesdesign
 import kotlinx.coroutines.runBlocking
 
 
+/**
+ * Examples of implementation of Sequence-like functionality using continuations.
+ */
 object SequencesAndContinuations {
     val fooSeq = sequence<Int> {
         var i = 0

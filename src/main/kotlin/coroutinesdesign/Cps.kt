@@ -3,6 +3,9 @@ package coroutinesdesign
 
 typealias CpsIntCont = (Int) -> Unit
 
+/**
+ * Examples of transformation of funtions into continuation passing style.
+ */
 object Cps {
     fun f1(x: Int): Int = x + 1
 
