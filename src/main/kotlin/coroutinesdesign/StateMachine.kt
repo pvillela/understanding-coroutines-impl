@@ -1,13 +1,17 @@
 package coroutinesdesign
 
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlin.coroutines.Continuation
+import kotlin.coroutines.CoroutineContext
+import kotlin.coroutines.EmptyCoroutineContext
+import kotlin.coroutines.startCoroutine
 
-
-typealias SmCont = (Any?) -> Unit
 
 object StateMachine {
+
     fun f1(x: Int): Int = x + 1
 
     fun f2(x: Int): Int = x * 10
@@ -82,6 +86,7 @@ object StateMachine {
 
     // Reuses the same state machine instance at each step. Shallow stack.
     fun CoroutineScope.fCpsSmLaunch(x: Int, cont: SmCont) {
+        val scope = this
         var label: Int = 0
         val sm = object : SmCont {
             override fun invoke(input: Any?) {
@@ -101,7 +106,63 @@ object StateMachine {
                     2 -> {
                         val v = input as Int
                         val w = v + 3
-                        launch { cont(w) }
+                        cont(w)
+                    }
+                }
+            }
+        }
+        sm(null)
+    }
+
+    fun fCpsSmCoroutineEmptyCoroutine(context: CoroutineContext, x: Int, cont: SmCont) {
+        var label: Int = 0
+        val sm = object : SmCont {
+            override fun invoke(input: Any?) {
+                val self = this
+                when (label) {
+                    0 -> {
+                        val y = x + 10
+                        ++label
+                        runAsCoroutine { f1Cps(y, self) }
+                    }
+                    1 -> {
+                        val z = input as Int
+                        val u = z + 2
+                        ++label
+                        runAsCoroutine { f2Cps(u, self) }
+                    }
+                    2 -> {
+                        val v = input as Int
+                        val w = v + 3
+                        cont(w)
+                    }
+                }
+            }
+        }
+        sm(null)
+    }
+
+    fun fCpsSmCoroutine(context: CoroutineContext, x: Int, cont: SmCont) {
+        var label: Int = 0
+        val sm = object : SmCont {
+            override fun invoke(input: Any?) {
+                val self = this
+                when (label) {
+                    0 -> {
+                        val y = x + 10
+                        ++label
+                        runAsCoroutine(context) { f1Cps(y, self) }
+                    }
+                    1 -> {
+                        val z = input as Int
+                        val u = z + 2
+                        ++label
+                        runAsCoroutine(context) { f2Cps(u, self) }
+                    }
+                    2 -> {
+                        val v = input as Int
+                        val w = v + 3
+                        cont(w)
                     }
                 }
             }
@@ -118,13 +179,19 @@ object StateMachine {
         println("Direct style")
         println(f(1))
 
-        println("fCpsSm0: Continuation passing style")
+        println("fCpsSm0: state machine")
         fCpsSm0(1, finalCont)
 
-        println("fCpsSm: Continuation passing style")
+        println("fCpsSm: state machine")
         fCpsSm(1, finalCont)
 
-        println("fCpsSmLaunch: Continuation passing style")
+        println("fCpsSmLaunch: state machine with launch")
         runBlocking { fCpsSmLaunch(1, finalCont) }
+
+        println("fCpsSmCoroutine: state machine with runAsCoroutine -- EmptyCoroutineContext")
+        runBlocking {
+            val context = EmptyCoroutineContext
+            fCpsSmCoroutine(context, 1, finalCont)
+        }
     }
 }
