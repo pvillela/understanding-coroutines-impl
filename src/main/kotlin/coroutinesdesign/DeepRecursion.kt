@@ -12,6 +12,8 @@ import kotlin.coroutines.resumeWithException
  * Based on https://medium.com/@elizarov/deep-recursion-with-coroutines-7c53e15993e3
  */
 object DeepRecursion {
+    
+    fun <T> Continuation<T>.show(): String = "${this.hashCode()}-$this"
 
     @Suppress("UNCHECKED_CAST")
     class DeepRecursiveScope<T, R>(
@@ -31,8 +33,6 @@ object DeepRecursion {
         /** Continuation used by current recursive call. */
         private var stateMachine: Continuation<R>? = null
 
-        private var stateMachineCount = 0
-
         /** Loop control. */
         private var completed = false
 
@@ -45,11 +45,10 @@ object DeepRecursion {
          */
         suspend fun callRecursive(value: T): R =
                 suspendCoroutineUninterceptedOrReturn { cont ->
-                    println("callRecursive: stateMachine=$cont, value=$value")
-                    if (this.stateMachine != cont) {
-                        println("*** stateMachine change ${++stateMachineCount} from $stateMachine to $cont")
-                        this.stateMachine = cont
-                    }
+                    println("callRecursive: stateMachine=${cont.show()}, value=$value")
+                    if (this.stateMachine != cont)
+                        println("*** stateMachine change from ${stateMachine?.show()} to ${cont.show()}")
+                    this.stateMachine = cont
                     this.value = value
                     COROUTINE_SUSPENDED
                 }
@@ -57,11 +56,11 @@ object DeepRecursion {
         fun runCallLoop(): R {
             var i = 0
             while (!completed) {
-                println("runCallLoop ${++i} -- top: value=$value, result=$result, stateMachine=$stateMachine")
+                println("runCallLoop ${++i} -- top: value=$value, result=$result, stateMachine=${stateMachine?.show()}")
                 // ~startCoroutineUninterceptedOrReturn
                 val cont = stateMachine ?: this
                 val r = try {
-                    println("runCallLoop -- before function: value=$value, result=$result, cont=$cont")
+                    println("runCallLoop -- before function: value=$value, result=$result, cont=${cont.show()}")
                     // In the first loop iteration, `this` is passed as `cont`, so `this` is the
                     // completion continuation of the state machine of `block` when the state machine
                     // is instantiated here on that first call. On subsequent loop iterations, the
@@ -73,11 +72,11 @@ object DeepRecursion {
                     cont.resumeWithException(e)
                     continue
                 }
-                println("runCallLoop -- after function: r=$r, value=$value, result=$result, stateMachine=$stateMachine")
+                println("runCallLoop -- after function: r=$r, value=$value, result=$result, stateMachine=${stateMachine?.show()}")
                 if (r !== COROUTINE_SUSPENDED) {
-                    println("runCallLoop -- before stateMachine.resume: r=$r, value=$value, result=$result, stateMachine=$cont")
+                    println("runCallLoop -- before stateMachine.resume: r=$r, value=$value, result=$result, stateMachine=${cont.show()}")
                     cont.resume(r as R)
-                    println("runCallLoop -- after stateMachine.resume: r=$r, value=$value, result=$result, stateMachine=$cont")
+                    println("runCallLoop -- after stateMachine.resume: r=$r, value=$value, result=$result, stateMachine=${cont.show()}")
                 }
             }
             return result.getOrThrow()
@@ -111,7 +110,7 @@ object DeepRecursion {
     val n = 2
 
     val deepTree = generateSequence(Tree(null, null)) { prev ->
-        Tree(prev, null)
+        Tree(prev, prev)
     }.take(n).last()
 
     val depth = DeepRecursiveFunction<Tree?, Int> { t ->
