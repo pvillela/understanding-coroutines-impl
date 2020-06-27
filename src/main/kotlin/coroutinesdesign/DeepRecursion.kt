@@ -29,14 +29,15 @@ object DeepRecursion {
         private var value: Any? = value
 
         /** Continuation used by current recursive call. */
-        private var cont: Continuation<R>? = this
+        private var stateMachine: Continuation<R>? = null
 
-        override fun toString(): String {
-            return "DeepRecursiveScope-" + super.toString()
-        }
+        private var stateMachineCount = 0
+
+        /** Loop control. */
+        private var completed = false
 
         /**
-         * Sets [cont] to the current continuation and sets [value] to the passed-in argument
+         * Sets [stateMachine] to the current continuation and sets [value] to the passed-in argument
          * so that these fields can be used in the next invocation of [function] in [runCallLoop].
          * The current continuation is the state machine continuation of `block` at the point of
          * invocation of [callRecursive].
@@ -44,46 +45,49 @@ object DeepRecursion {
          */
         suspend fun callRecursive(value: T): R =
                 suspendCoroutineUninterceptedOrReturn { cont ->
-                    println("callRecursive: cont=$cont, value=$value")
-                    this.cont = cont
+                    println("callRecursive: stateMachine=$cont, value=$value")
+                    if (this.stateMachine != cont) {
+                        println("*** stateMachine change ${++stateMachineCount} from $stateMachine to $cont")
+                        this.stateMachine = cont
+                    }
                     this.value = value
                     COROUTINE_SUSPENDED
                 }
 
         fun runCallLoop(): R {
             var i = 0
-            while (true) {
-                println("runCallLoop ${++i} -- top: value=$value, result=$result, cont=$cont")
-                val cont = this.cont // null means done
-                        ?: return result.getOrThrow()
+            while (!completed) {
+                println("runCallLoop ${++i} -- top: value=$value, result=$result, stateMachine=$stateMachine")
                 // ~startCoroutineUninterceptedOrReturn
+                val cont = stateMachine ?: this
                 val r = try {
                     println("runCallLoop -- before function: value=$value, result=$result, cont=$cont")
                     // In the first loop iteration, `this` is passed as `cont`, so `this` is the
                     // completion continuation of the state machine of `block` when the state machine
                     // is instantiated here on that first call. On subsequent loop iterations, the
                     // state machine is passed as the `cont` argument and its state changes on each
-                    // call. At completion, the state machine calls `this` with the value computed by
-                    // `block`.
+                    // call. At completion, the state machine calls its cocmpletion continuation `this`
+                    // with the value computed by `block`.
                     function(this, value, cont)
                 } catch (e: Throwable) {
                     cont.resumeWithException(e)
                     continue
                 }
-                println("runCallLoop -- after function: r=$r, value=$value, result=$result, cont=$cont")
+                println("runCallLoop -- after function: r=$r, value=$value, result=$result, stateMachine=$stateMachine")
                 if (r !== COROUTINE_SUSPENDED) {
-                    println("runCallLoop -- before cont.resume: r=$r, value=$value, result=$result, cont=$cont")
+                    println("runCallLoop -- before stateMachine.resume: r=$r, value=$value, result=$result, stateMachine=$cont")
                     cont.resume(r as R)
-                    println("runCallLoop -- after cont.resume: r=$r, value=$value, result=$result, cont=$cont")
+                    println("runCallLoop -- after stateMachine.resume: r=$r, value=$value, result=$result, stateMachine=$cont")
                 }
             }
+            return result.getOrThrow()
         }
 
         override val context: CoroutineContext
             get() = EmptyCoroutineContext
 
         override fun resumeWith(result: Result<R>) {
-            cont = null
+            completed = true
             this.result = result
         }
     }
@@ -103,8 +107,8 @@ object DeepRecursion {
         }
     }
 
-//        val n = 100_000
-    val n = 1
+//    val n = 100_000
+    val n = 2
 
     val deepTree = generateSequence(Tree(null, null)) { prev ->
         Tree(prev, null)
