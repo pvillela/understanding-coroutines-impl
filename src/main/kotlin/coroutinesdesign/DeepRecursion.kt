@@ -1,5 +1,7 @@
 package coroutinesdesign
 
+import coroutinesdesign.DeepRecursionCommon.Tree
+import coroutinesdesign.DeepRecursionCommon.deepTree
 import kotlin.coroutines.Continuation
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.EmptyCoroutineContext
@@ -98,21 +100,6 @@ object DeepRecursion {
     operator fun <T, R> DeepRecursiveFunction<T, R>.invoke(value: T): R =
             DeepRecursiveScope<T, R>(block, value).runCallLoop()
 
-    class Tree(val left: Tree?, val right: Tree?) {
-        override fun toString(): String {
-            val l = left?.run { "Tree@${this.hashCode()}" } ?: "null"
-            val r = right?.run { "Tree@${this.hashCode()}" } ?: "null"
-            return "Tree($l, $r)"
-        }
-    }
-
-//    val n = 100_000
-    val n = 2
-
-    val deepTree = generateSequence(Tree(null, null)) { prev ->
-        Tree(prev, prev)
-    }.take(n).last()
-
     val depth = DeepRecursiveFunction<Tree?, Int> { t ->
         println("DeepRecursiveFunction -- entry: t=$t")
         if (t == null) 0 else maxOf(
@@ -133,6 +120,8 @@ object DeepRecursion {
 
     @JvmStatic
     fun main(args: Array<String>) {
-        println(depth(deepTree))
+//        val n = 100_000
+        val n = 2
+        println(depth(deepTree(n)))
     }
 }

@@ -1,12 +1,12 @@
 package coroutinesdesign
 
+import coroutinesdesign.DeepRecursionCommon.Tree
+import coroutinesdesign.DeepRecursionCommon.deepTree
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.yield
 
 
 object DeepRecursionWithYield {
-
-    class Tree(val left: Tree?, val right: Tree?)
 
     suspend fun depth0(t: Tree?): Int =
             if (t == null) 0 else maxOf(
@@ -22,14 +22,10 @@ object DeepRecursionWithYield {
 
     fun depth(t: Tree?): Int = runBlocking { depth0(t) }
 
-    val n = 100_000
-
-    val deepTree = generateSequence(Tree(null, null)) { prev ->
-        Tree(prev, null)
-    }.take(n).last()
-
     @JvmStatic
     fun main(args: Array<String>) {
-        println(depth(deepTree))
+//        val n = 100_000
+        val n = 2
+        println(depth(deepTree(n)))
     }
 }
