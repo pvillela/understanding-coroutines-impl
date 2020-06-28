@@ -32,14 +32,14 @@ object DeepRecursion {
         /** Argument of the current recursive call. */
         private var value: Any? = value
 
-        /** Continuation used by current recursive call. */
-        private var stateMachine: Continuation<R>? = null
+        /** Current state of continuation stack -- see [runCallLoop]. */
+        private var cont: Continuation<R> = this
 
         /** Loop control. */
         private var completed = false
 
         /**
-         * Sets [stateMachine] to the current continuation and sets [value] to the passed-in argument
+         * Sets [cont] to the current continuation and sets [value] to the passed-in argument
          * so that these fields can be used in the next invocation of [function] in [runCallLoop].
          * The current continuation is the state machine continuation of `block` at the point of
          * invocation of [callRecursive].
@@ -47,46 +47,47 @@ object DeepRecursion {
          */
         suspend fun callRecursive(value: T): R =
                 suspendCoroutineUninterceptedOrReturn { cont ->
-                    println("callRecursive: stateMachine=${cont.show()}, value=$value")
-                    if (this.stateMachine != cont)
-                        println("*** stateMachine change from ${stateMachine?.show()} to ${cont.show()}")
-                    this.stateMachine = cont
+                    println("callRecursive: cont=${cont.show()}, value=$value")
+                    if (this.cont != cont)
+                        println("*** cont change from ${this.cont.show()} to ${cont.show()}")
+                    this.cont = cont
                     this.value = value
                     COROUTINE_SUSPENDED
                 }
 
         /**
-         * In the first loop iteration, `this` is passed to `funcction` as `cont`, so `this`
-         * is the completion continuation of the state machine of `block` or `function`
-         * when the state machine is instantiated here on that first invocation.
-         * On subsequent loop iterations, a state machine instance is passed as the `cont`
-         * argument and the passed-in state machine becomes the completion continuation
-         * of the state machine instantiated on that invocation of `function`.
+         * Each continuation can be viewed as a stack of continuations. The initial stack has
+         * a single element, `this`, which is passed as the `cont` argument on the invocation
+         * of [function] on the first iteration of the loop. If a continuation is a
+         * state machine SM with completion continuation CC then the top of that stack is SM
+         * and the next element is CC. If CC is a state machine SM2 with completion continuation
+         * CC2 then the third element of the stack is CC2. And so on. [cont] holds the current
+         * continuation stack for the algorithm.
          *
-         * Each continuation can be viewed as a stack and the set of continuations is a
-         * set of stacks.
+         * An invocation of [function] that results in a call to [callRecursive] pushes the state
+         * machine SM instantiated in that invocation onto the stack in the sense that [cont] is
+         * SM's completion continuation and [cont] is reassigned to have SM as its value.
+         * Such an invocation returns COROUTINE_SUSPENDED, which is returned by [callRecursive],
+         * and then the next iteration of the loop ensues.
          *
-         * For each invocation of `function`, the generated state machine continuation is
-         * effectively pushed on the stack represented by its completion continuation, the
-         * one that is passed in as the argument to `function`.
+         * An invocation of [function] that does not involve a call to [callRecursive] returns a
+         * value other than COROUTINE_SUSPENDED. In this case, the invocation is followed
+         * by the resumption of [cont] with the value returned by [function]. If [cont] is a
+         * state machine SM with completion continuation CC then [cont]'s resumption may be of
+         * one of two kinds. Kind 1 -- SM transitions to a new state where [callRecursive] is
+         * called, in which case the stack remains the same, although the SM object has
+         * internally changed state. Kind 2 -- SM transitions to its completion, in which case
+         * CC is resumed with the resulting value produced by SM, and we can recursively have
+         * either a Kind 1 or Kind 2 scenario. In any case, the stack [cont] either remains
+         * the same or it is popped one or more times.
          *
-         * Calls to `function` that result in a call to callRecursive return COROUTINE_SUSPENDED and
-         * the loop continues directly after that.
-         * Calls to `function` that do not result in a call to callRecursive return a value other than
-         * COROUTINE_SUSPENDED and the next step is to resume the current continuation with the
-         * value returned by the call to `function`.
-         *
-         * Whenever the above-mentioned resumption step causes the current continuation state machine
-         * SM to complete, SM invokes its completion continuation CC, effectively popping the stack
-         * which has SM at the top and CC at the bottom, resulting in the stack corresponding to CC.
-         * In this case, when CC is `this`, the processing is complete and the rsult is returned.
+         * The algorithm completes when [function] returns a value other than COROUTINE_SUSPENDED
+         * and [cont] is `this` or, more likely, when in scenario of Kind 2 above, CC is `this`.
          */
         fun runCallLoop(): R {
             var i = 0
             while (!completed) {
-                println("runCallLoop ${++i} -- top: value=$value, result=$result, stateMachine=${stateMachine?.show()}")
-                // ~startCoroutineUninterceptedOrReturn
-                val cont = stateMachine ?: this
+                println("runCallLoop ${++i} -- top: value=$value, result=$result, cont=${cont.show()}")
                 val r = try {
                     println("runCallLoop -- before function: value=$value, result=$result, cont=${cont.show()}")
                     function(this, value, cont)
@@ -94,11 +95,11 @@ object DeepRecursion {
                     cont.resumeWithException(e)
                     continue
                 }
-                println("runCallLoop -- after function: r=$r, value=$value, result=$result, stateMachine=${stateMachine?.show()}")
+                println("runCallLoop -- after function: r=$r, value=$value, result=$result, cont=${cont.show()}")
                 if (r !== COROUTINE_SUSPENDED) {
-                    println("runCallLoop -- before stateMachine.resume: r=$r, value=$value, result=$result, stateMachine=${cont.show()}")
+                    println("runCallLoop -- before cont.resume: r=$r, value=$value, result=$result, cont=${cont.show()}")
                     cont.resume(r as R)
-                    println("runCallLoop -- after stateMachine.resume: r=$r, value=$value, result=$result, stateMachine=${cont.show()}")
+                    println("runCallLoop -- after cont.resume: r=$r, value=$value, result=$result, cont=${cont.show()}")
                 }
             }
             return result.getOrThrow()

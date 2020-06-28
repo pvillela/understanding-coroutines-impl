@@ -4,8 +4,8 @@ DeepRecursion -- Execution of depth(deepTree) with n = 2
 Note:
 -----
 -   sm[x, y, z] is the state machine produced when `function` is invoked with input x 
-    and continuation y, at state z.
--   Tree1 = Tree1
+    and continuation y, when it is at state z.
+-   Tree1 = Tree(null, null)
 
 
 runCallLoop
@@ -15,7 +15,7 @@ runCallLoop
         r = 
             function(this, value, cont)
                 callRecursive(Tree1)  // left
-                    this.stateMachine = sm[Tree(Tree1, Tree1), this, left]
+                    this.cont = sm[Tree(Tree1, Tree1), this, left]
                     this.value = Tree1
                     COROUTINE_SUSPENDED
     loop 2
@@ -24,7 +24,7 @@ runCallLoop
         r = 
             function(this, value, cont)
                 callRecursive(null)  // left
-                    this.stateMachine = sm[Tree1, sm[Tree(Tree1, Tree1), this, left], left]
+                    this.cont = sm[Tree1, sm[Tree(Tree1, Tree1), this, left], left]
                     this.value = null
                     COROUTINE_SUSPENDED
     loop 3
@@ -36,7 +36,7 @@ runCallLoop
         cont.resume(0)
             resL = 0
             callRecursive(null)  // right
-                this.stateMachine = sm[Tree1, sm[Tree(Tree1, Tree1), this, left], right]
+                this.cont = sm[Tree1, sm[Tree(Tree1, Tree1), this, left], right]
                 this.value = null
                 COROUTINE_SUSPENDED
     loop 4
@@ -52,7 +52,7 @@ runCallLoop
             sm[Tree(Tree1, Tree1), this, left].resume(1)
                 resL = 1
                 callRecursive(Tree1) // right
-                    this.stateMachine = sm[Tree(Tree1, Tree1), this, right]
+                    this.cont = sm[Tree(Tree1, Tree1), this, right]
                     this.value = Tree1
                     COROUTINE_SUSPENDED
     loop 5
@@ -61,7 +61,7 @@ runCallLoop
         r =
             function(this, value, cont)
                 callRecursive(null) // left
-                    this.stateMachine = sm[Tree1, sm[Tree(Tree1, Tree1), this, right], left]
+                    this.cont = sm[Tree1, sm[Tree(Tree1, Tree1), this, right], left]
                     this.value = null
                     COROUTINE_SUSPENDED
     loop 6
@@ -73,7 +73,7 @@ runCallLoop
         cont.resume(0)
             resL = 0
             callRecursive(null)  // right
-                this.stateMachine = sm[Tree1, sm[Tree(Tree1, Tree1), this, right], right]
+                this.cont = sm[Tree1, sm[Tree(Tree1, Tree1), this, right], right]
                 this.value = null
                 COROUTINE_SUSPENDED
     loop 7
