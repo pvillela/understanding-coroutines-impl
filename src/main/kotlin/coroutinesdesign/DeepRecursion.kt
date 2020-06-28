@@ -14,7 +14,7 @@ import kotlin.coroutines.resumeWithException
  * Based on https://medium.com/@elizarov/deep-recursion-with-coroutines-7c53e15993e3
  */
 object DeepRecursion {
-    
+
     fun <T> Continuation<T>.show(): String = "${this.hashCode()}-$this"
 
     @Suppress("UNCHECKED_CAST")
@@ -55,6 +55,32 @@ object DeepRecursion {
                     COROUTINE_SUSPENDED
                 }
 
+        /**
+         * In the first loop iteration, `this` is passed to `funcction` as `cont`, so `this`
+         * is the completion continuation of the state machine of `block` or `function`
+         * when the state machine is instantiated here on that first invocation.
+         * On subsequent loop iterations, a state machine instance is passed as the `cont`
+         * argument and the passed-in state machine becomes the completion continuation
+         * of the state machine instantiated on that invocation of `function`.
+         *
+         * Each continuation can be viewed as a stack and the set of continuations is a
+         * set of stacks.
+         *
+         * For each invocation of `function`, the generated state machine continuation is
+         * effectively pushed on the stack represented by its completion continuation, the
+         * one that is passed in as the argument to `function`.
+         *
+         * Calls to `function` that result in a call to callRecursive return COROUTINE_SUSPENDED and
+         * the loop continues directly after that.
+         * Calls to `function` that do not result in a call to callRecursive return a value other than
+         * COROUTINE_SUSPENDED and the next step is to resume the current continuation with the
+         * value returned by the call to `function`.
+         *
+         * Whenever the above-mentioned resumption step causes the current continuation state machine
+         * SM to complete, SM invokes its completion continuation CC, effectively popping the stack
+         * which has SM at the top and CC at the bottom, resulting in the stack corresponding to CC.
+         * In this case, when CC is `this`, the processing is complete and the rsult is returned.
+         */
         fun runCallLoop(): R {
             var i = 0
             while (!completed) {
@@ -63,12 +89,6 @@ object DeepRecursion {
                 val cont = stateMachine ?: this
                 val r = try {
                     println("runCallLoop -- before function: value=$value, result=$result, cont=${cont.show()}")
-                    // In the first loop iteration, `this` is passed as `cont`, so `this` is the
-                    // completion continuation of the state machine of `block` when the state machine
-                    // is instantiated here on that first call. On subsequent loop iterations, the
-                    // state machine is passed as the `cont` argument and its state changes on each
-                    // call. At completion, the state machine calls its cocmpletion continuation `this`
-                    // with the value computed by `block`.
                     function(this, value, cont)
                 } catch (e: Throwable) {
                     cont.resumeWithException(e)
