@@ -1,0 +1,48 @@
+DeepRecursionWithYield -- Execution of depth(deepTree) with n = 2
+=================================================================
+
+Note:
+-----
+-   Let depthCsp be the continuation-passing-style version of depth0 which is automatically
+    created by the compiler.
+-   Let yieldCsp be the continuation-passing-style version of yield which is automatically
+    created by the compiler.
+-   sm[x, y, z] is the state machine produced when depthCsp is invoked with input x 
+    and continuation y, when it is at state z.
+-   Tree1 = Tree(null, null)
+
+
+depth(deepTree(2)) 
+    is equivalent to
+
+runBlocking { depth(deepTree(2)) } 
+    is equivalent to
+
+depthCsp(deepTree(2), finalCont) 
+    where finalCont is the continuation at the point of invocation of depth0 and runBlocking ensures 
+    that any pending continuations are executed before the block exits.
+
+Execution trace:
+----------------
+
+depthCsp(deepTree(2), finalCont) 
+    let cont1 = sm[Tree(Tree1, Tree1), finalCont, left]
+    yieldCsp(cont1) ==> returns COROUTINE_SUSPENDED
+
+cont1.reume(Unit)
+    depthCsp(Tree1, cont1)
+        let cont2 = sm[Tree1, cont1, left]
+        yieldCsp(cont2) ==> returns COROUTINE_SUSPENDED
+
+cont2.reume(Unit)
+    depthCsp(null, cont2)
+        cont2.resume(0)
+            let cont2 = sm[Tree1, cont1, right]
+            yieldCsp(cont2) ==> returns COROUTINE_SUSPENDED
+
+cont2.resume(Unit)
+    depthCsp(null, cont2)
+        cont2.resume(0)
+        0 + 0 = 0
+
+cont1.resume(0)

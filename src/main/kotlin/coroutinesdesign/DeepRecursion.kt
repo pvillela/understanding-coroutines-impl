@@ -31,9 +31,9 @@ object DeepRecursion {
         }
     }
 
-    fun <T> wrappedContinuation(cont: Continuation<T>): Continuation<T> =
-            if (cont is WrappedContinuation<T>) cont
-            else WrappedContinuation(cont)
+    fun <T> wrappedContinuation(cont: Continuation<T>): Continuation<T> = cont
+//            if (cont is WrappedContinuation<T>) cont
+//            else WrappedContinuation(cont)
 
     @Suppress("UNCHECKED_CAST")
     class DeepRecursiveScope<T, R>(
@@ -145,8 +145,8 @@ object DeepRecursion {
             DeepRecursiveScope<T, R>(block, value).runCallLoop()
 
     val depth = DeepRecursiveFunction<Tree?, Int> { t ->
-        println("DeepRecursiveFunction -- entry: t=$t")
-        if (t == null) 0 else maxOf(
+        println("block -- entry: t=$t")
+        val res = if (t == null) 0 else maxOf(
                 run {
                     println("DeepRecursiveFunction -- before callRecursive(t.left): t=$t")
                     val resL = callRecursive(t.left)
@@ -160,12 +160,14 @@ object DeepRecursion {
                     resR
                 }
         ) + 1
+        println("block -- about to exit: t=$t, res=$res")
+        res
     }
 
     @JvmStatic
     fun main(args: Array<String>) {
-//        val n = 100_000
-        val n = 2
+        val n = 100_000
+//        val n = 2
         println(depth(deepTree(n)))
     }
 }
