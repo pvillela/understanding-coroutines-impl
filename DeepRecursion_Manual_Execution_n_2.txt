@@ -6,6 +6,7 @@ Note:
 -   sm[x, y, z] is the state machine produced when `function` is invoked with input x 
     and continuation y, when it is at state z.
 -   Tree1 = Tree(null, null)
+-   "<---" indicates execution by ContinuationInterceptor so that there is no burden on call stack.
 
 
 runCallLoop
@@ -49,7 +50,7 @@ runCallLoop
             resR = 0
             max(0, 0) = 0
             0 + 1 = 1
-            sm[Tree(Tree1, Tree1), this, left].resume(1)
+        <-- sm[Tree(Tree1, Tree1), this, left].resume(1)
                 resL = 1
                 callRecursive(Tree1) // right
                     this.cont = sm[Tree(Tree1, Tree1), this, right]
@@ -86,11 +87,11 @@ runCallLoop
             resR = 0
             max(0, 0) = 0
             0 + 1 = 1
-            sm[Tree(Tree1, Tree1), this, right].resume(1)
+        <-- sm[Tree(Tree1, Tree1), this, right].resume(1)
                 resR = 1
                 max(1, 1) = 1
                 1 + 1 = 2
-                this.resume(2)
+        <------ this.resume(2)
                     completed = true
                     this.result = Success(2)
     return result.getOrThrow()

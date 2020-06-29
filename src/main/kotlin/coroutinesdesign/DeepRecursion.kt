@@ -17,7 +17,23 @@ import kotlin.coroutines.resumeWithException
  */
 object DeepRecursion {
 
-    fun <T> Continuation<T>.show(): String = "${this.hashCode()}-$this"
+    fun <T> Continuation<T>.show(): String =
+            if (this is WrappedContinuation<*>) "[W${this.hashCode()}]-[${this.cont.hashCode()}]-${this.cont}"
+            else "[${this.hashCode()}]-$this"
+
+    class WrappedContinuation<T>(val cont: Continuation<T>) : Continuation<T> {
+        override val context: CoroutineContext
+            get() = cont.context
+
+        override fun resumeWith(result: Result<T>) {
+            println("=== Resumed continuation: result=$result, cont=${cont.show()}")
+            cont.resumeWith(result)
+        }
+    }
+
+    fun <T> wrappedContinuation(cont: Continuation<T>): Continuation<T> =
+            if (cont is WrappedContinuation<T>) cont
+            else WrappedContinuation(cont)
 
     @Suppress("UNCHECKED_CAST")
     class DeepRecursiveScope<T, R>(
@@ -35,7 +51,7 @@ object DeepRecursion {
         private var value: Any? = value
 
         /** Current state of continuation stack -- see [runCallLoop]. */
-        private var cont: Continuation<R> = this
+        private var cont: Continuation<R> = wrappedContinuation(this)
 
         /** Loop control. */
         private var completed = false
@@ -50,9 +66,14 @@ object DeepRecursion {
         suspend fun callRecursive(value: T): R =
                 suspendCoroutineUninterceptedOrReturn { cont ->
                     println("callRecursive: cont=${cont.show()}, value=$value")
-                    if (this.cont != cont)
-                        println("*** cont change from ${this.cont.show()} to ${cont.show()}")
-                    this.cont = cont
+                    val thisCont = this.cont
+                    val cont0 =
+                            if (thisCont is WrappedContinuation<*>) thisCont.cont
+                            else thisCont
+                    if (cont0 != cont) {
+                        println("*** cont change from ${cont0.show()} to ${cont.show()}")
+                        this.cont = wrappedContinuation(cont)
+                    }
                     this.value = value
                     COROUTINE_SUSPENDED
                 }
