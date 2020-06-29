@@ -11,7 +11,9 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
 /**
- * Based on https://medium.com/@elizarov/deep-recursion-with-coroutines-7c53e15993e3
+ * Based on https://medium.com/@elizarov/deep-recursion-with-coroutines-7c53e15993e3.
+ * See DeepRecursion_Manual_Execution_n_2.txt for a step-by-step manual execution of [main]
+ * in the case n = 2.
  */
 object DeepRecursion {
 

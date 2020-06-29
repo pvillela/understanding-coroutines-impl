@@ -105,7 +105,7 @@ object StateMachine {
                     2 -> {
                         val v = input as Int
                         val w = v + 3
-                        cont(w)
+                        launch { cont(w) }
                     }
                 }
             }
@@ -133,7 +133,7 @@ object StateMachine {
                     2 -> {
                         val v = input as Int
                         val w = v + 3
-                        cont(w)
+                        runAsCoroutine(context) { cont(w) }
                     }
                 }
             }

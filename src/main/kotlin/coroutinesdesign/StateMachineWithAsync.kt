@@ -124,7 +124,7 @@ object StateMachineWithAsync {
                     2 -> {
                         val v = input as Int
                         val w = v + 3
-                        cont(w)
+                        launch { cont(w) }
                     }
                 }
             }
@@ -153,7 +153,7 @@ object StateMachineWithAsync {
                     2 -> {
                         val v = input as Int
                         val w = v + 3
-                        cont(w)
+                        launch { cont(w) }
                     }
                 }
             }
