@@ -31,9 +31,9 @@ object DeepRecursion {
         }
     }
 
-    fun <T> wrappedContinuation(cont: Continuation<T>): Continuation<T> = cont
-//            if (cont is WrappedContinuation<T>) cont
-//            else WrappedContinuation(cont)
+    fun <T> wrappedContinuation(cont: Continuation<T>): Continuation<T> =
+            if (cont is WrappedContinuation<T>) cont
+            else WrappedContinuation(cont)
 
     @Suppress("UNCHECKED_CAST")
     class DeepRecursiveScope<T, R>(
@@ -51,7 +51,7 @@ object DeepRecursion {
         private var value: Any? = value
 
         /** Current state of continuation stack -- see [runCallLoop]. */
-        private var cont: Continuation<R> = wrappedContinuation(this)
+        private var cont: Continuation<R> = this
 
         /** Loop control. */
         private var completed = false
@@ -66,13 +66,9 @@ object DeepRecursion {
         suspend fun callRecursive(value: T): R =
                 suspendCoroutineUninterceptedOrReturn { cont ->
                     println("callRecursive: cont=${cont.show()}, value=$value")
-                    val thisCont = this.cont
-                    val cont0 =
-                            if (thisCont is WrappedContinuation<*>) thisCont.cont
-                            else thisCont
-                    if (cont0 != cont) {
-                        println("*** cont change from ${cont0.show()} to ${cont.show()}")
-                        this.cont = wrappedContinuation(cont)
+                    if (this.cont != cont) {
+                        println("*** cont change from ${this.cont.show()} to ${cont.show()}")
+                        this.cont = cont
                     }
                     this.value = value
                     COROUTINE_SUSPENDED
@@ -110,6 +106,7 @@ object DeepRecursion {
         fun runCallLoop(): R {
             var i = 0
             while (!completed) {
+                val cont = wrappedContinuation(this.cont)  // causes stack overflow
                 println("runCallLoop ${++i} -- top: value=$value, result=$result, cont=${cont.show()}")
                 val r = try {
                     println("runCallLoop -- before function: value=$value, result=$result, cont=${cont.show()}")
