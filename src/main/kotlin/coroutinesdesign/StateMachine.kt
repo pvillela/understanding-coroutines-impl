@@ -58,9 +58,9 @@ object StateMachine {
 
     // Reuses the same state machine instance at each step. Deep stack.
     fun fCpsSm(x: Int, cont: SmCont) {
-        var label = 0
-        val y = x + 10
         val sm = object : SmCont {
+            var label = 0
+            val y = x + 10
             override fun invoke(input: Any?) {
                 when (label) {
                     0 -> {
@@ -86,28 +86,28 @@ object StateMachine {
 
     // Reuses the same state machine instance at each step. Shallow stack.
     fun fCpsSmTrampoline(x: Int, cont: SmCont) {
-        var completionCont: () -> Unit = { }
+        var currentCont: () -> Unit = { }
         var completed = false
-        var label = 0
         val sm = object : SmCont {
+            var label = 0
             override fun invoke(input: Any?) {
                 val self = this
                 when (label) {
                     0 -> {
                         val y = x + 10
                         ++label
-                        completionCont = { f1Cps(y, self) }
+                        currentCont = { f1Cps(y, self) }
                     }
                     1 -> {
                         val z = input as Int
                         val u = z + 2
                         ++label
-                        completionCont = { f2Cps(u, self) }
+                        currentCont = { f2Cps(u, self) }
                     }
                     2 -> {
                         val v = input as Int
                         val w = v + 3
-                        completionCont = {
+                        currentCont = {
                             cont(w)
                             completed = true
                         }
@@ -117,14 +117,14 @@ object StateMachine {
         }
         sm(null)
         while (!completed) {
-            completionCont()
+            currentCont()
         }
     }
 
     // Reuses the same state machine instance at each step. Shallow stack.
     fun CoroutineScope.fCpsSmLaunch(x: Int, cont: SmCont) {
-        var label = 0
         val sm = object : SmCont {
+            var label = 0
             override fun invoke(input: Any?) {
                 val self = this
                 when (label) {
@@ -151,8 +151,8 @@ object StateMachine {
     }
 
     fun fCpsSmCoroutine(context: CoroutineContext, x: Int, cont: SmCont) {
-        var label = 0
         val sm = object : SmCont {
+            var label = 0
             override fun invoke(input: Any?) {
                 val self = this
                 when (label) {

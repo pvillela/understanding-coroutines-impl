@@ -112,10 +112,10 @@ object StateMachineWithAsync {
     }
 
     fun CoroutineScope.fBCpsSmTrampoline(x: Int, cont: SmCont) {
-        var completionCont: () -> Unit = { }
+        var currentCont: () -> Unit = { }
         var completed = false
-        var label: Int = 0
         val sm = object : SmCont {
+            var label: Int = 0
             override fun invoke(input: Any?) {
                 val self = this
                 when (label) {
@@ -123,18 +123,18 @@ object StateMachineWithAsync {
                         val y = x + 10
                         ++label
                         val dz = f1DB(y)
-                        completionCont = { dz.awaitCps(self) }
+                        currentCont = { dz.awaitCps(self) }
                     }
                     1 -> {
                         val z = input as Int
                         val u = z + 2
                         ++label
-                        completionCont = { f2Cps(u, self) }
+                        currentCont = { f2Cps(u, self) }
                     }
                     2 -> {
                         val v = input as Int
                         val w = v + 3
-                        completionCont = {
+                        currentCont = {
                             cont(w)
                             completed = true
                         }
@@ -144,15 +144,15 @@ object StateMachineWithAsync {
         }
         sm(null)
         while (!completed) {
-            completionCont()
+            currentCont()
         }
     }
 
     suspend fun fSCpsSmTrampoline(x: Int, cont: SmCont) = coroutineScope {
-        var completionCont: suspend () -> Unit = { }
+        var currentCont: suspend () -> Unit = { }
         var completed = false
-        var label: Int = 0
         val sm = object : SmCont {
+            var label: Int = 0
             override fun invoke(input: Any?) {
                 val self = this
                 when (label) {
@@ -160,18 +160,18 @@ object StateMachineWithAsync {
                         val y = x + 10
                         ++label
                         val dz = f1DS(y)
-                        completionCont = { dz.awaitCps(self) }
+                        currentCont = { dz.awaitCps(self) }
                     }
                     1 -> {
                         val z = input as Int
                         val u = z + 2
                         ++label
-                        completionCont = { f2Cps(u, self) }
+                        currentCont = { f2Cps(u, self) }
                     }
                     2 -> {
                         val v = input as Int
                         val w = v + 3
-                        completionCont = {
+                        currentCont = {
                             cont(w)
                             completed = true
                         }
@@ -181,13 +181,13 @@ object StateMachineWithAsync {
         }
         sm(null)
         while (!completed) {
-            completionCont()
+            currentCont()
         }
     }
 
     fun CoroutineScope.fBCpsSmLaunch(x: Int, cont: SmCont) {
-        var label: Int = 0
         val sm = object : SmCont {
+            var label: Int = 0
             override fun invoke(input: Any?) {
                 val self = this
                 when (label) {
@@ -215,8 +215,8 @@ object StateMachineWithAsync {
     }
 
     fun CoroutineScope.fSCpsSmLaunch(x: Int, cont: SmCont) {
-        var label: Int = 0
         val sm = object : SmCont {
+            var label: Int = 0
             override fun invoke(input: Any?) {
                 val self = this
                 when (label) {
