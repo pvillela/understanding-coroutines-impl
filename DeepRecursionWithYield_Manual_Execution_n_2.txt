@@ -1,8 +1,8 @@
 DeepRecursionWithYield -- Execution of depth(deepTree) with n = 2
 =================================================================
 
-Note:
------
+Notes:
+------
 -   Let depthCsp be the continuation-passing-style version of depth0 which is automatically
     created by the compiler.
 -   Let yieldCsp be the continuation-passing-style version of yield which is automatically
@@ -10,6 +10,7 @@ Note:
 -   sm[x, y, z] is the state machine produced when depthCsp is invoked with input x 
     and continuation y, when it is at state z.
 -   Tree1 = Tree(null, null)
+-   "<--" indicates trampolining by coroutines machinery
 
 
 depth(deepTree(2)) 
@@ -19,7 +20,7 @@ runBlocking { depth(deepTree(2)) }
     is equivalent to
 
 depthCsp(deepTree(2), finalCont) 
-    where finalCont is the continuation at the point of invocation of depth0 and runBlocking ensures 
+    where finalCont is the continuation at the point of invocation of depth0, and runBlocking ensures
     that any pending continuations are executed before the block exits.
 
 Execution trace:
@@ -36,13 +37,38 @@ cont1.reume(Unit)
 
 cont2.reume(Unit)
     depthCsp(null, cont2)
-        cont2.resume(0)
-            let cont2 = sm[Tree1, cont1, right]
+<------ cont2.resume(0)
+            cont2 <mutates_to> sm[Tree1, cont1, right]
             yieldCsp(cont2) ==> returns COROUTINE_SUSPENDED
 
 cont2.resume(Unit)
     depthCsp(null, cont2)
-        cont2.resume(0)
-        0 + 0 = 0
+<------ cont2.resume(0)
+            max(0, 0) = 0
+            0 + 1 = 1
+<---------- cont1.resume(1)
+                cont1 <mutates_to> sm[Tree(Tree1, Tree1), finalCont, right]
+                yieldCsp(cont2) ==> returns COROUTINE_SUSPENDED
 
-cont1.resume(0)
+cont1.resume(Unit)
+    depthCsp(Tree1, cont1)
+        let cont3 = sm[Tree1, cont1, left]
+        yieldCsp(cont3) ==> returns COROUTINE_SUSPENDED
+
+cont3.reume(Unit)
+    depthCsp(null, cont3)
+<------ cont3.resume(0)
+            cont3 <mutates_to> sm[Tree1, cont1, right]
+            yieldCsp(cont3) ==> returns COROUTINE_SUSPENDED
+
+cont3.resume(Unit)
+    depthCsp(null, cont3)
+<------ cont3.resume(0)
+            max(0, 0) = 0
+            0 + 1 = 1
+<---------- cont1.resume(1)
+                max(1, 1) = 1
+                1 + 1 = 2
+<-------------- finalCont.resume(2)
+
+2 is returned

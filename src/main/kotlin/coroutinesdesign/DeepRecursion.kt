@@ -1,7 +1,12 @@
 package coroutinesdesign
 
+import coroutinesdesign.DeepRecursion.main
 import coroutinesdesign.DeepRecursionCommon.Tree
 import coroutinesdesign.DeepRecursionCommon.deepTree
+import kotlinx.coroutines.debug.DebugProbes
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlin.coroutines.Continuation
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.EmptyCoroutineContext
@@ -106,7 +111,7 @@ object DeepRecursion {
         fun runCallLoop(): R {
             var i = 0
             while (!completed) {
-                val cont = wrappedContinuation(this.cont)  // causes stack overflow
+//                val cont = wrappedContinuation(this.cont)  // causes stack overflow
                 println("runCallLoop ${++i} -- top: value=$value, result=$result, cont=${cont.show()}")
                 val r = try {
                     println("runCallLoop -- before function: value=$value, result=$result, cont=${cont.show()}")
@@ -162,9 +167,9 @@ object DeepRecursion {
     }
 
     @JvmStatic
-    fun main(args: Array<String>) {
-        val n = 100_000
-//        val n = 2
+    fun main(args: Array<String>) = runBlocking {
+//        val n = 100_000
+        val n = 2
         println(depth(deepTree(n)))
     }
 }

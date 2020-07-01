@@ -27,6 +27,7 @@ dependencies {
 
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:${properties["coroutines_core_version"]}")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:${properties["coroutines_jdk8"]}")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-debug:1.3.7")
 
     // Use the Kotlin test library.
     testImplementation("org.jetbrains.kotlin:kotlin-test")

@@ -17,20 +17,24 @@ import java.util.concurrent.ArrayBlockingQueue
 object StateMachineWithAsync {
 
     class MyDeferredB<T> {
+        @Volatile
         private var hasValue = false
+        @Volatile
         private var value: T? = null
         private val queue = ArrayBlockingQueue<T>(1)
 
         fun set(value: T) { queue.put(value) }
 
         fun await(): T {
-            synchronized(this) {
-                if (!hasValue) {
-                    value = queue.take()
-                    hasValue = true
+            if (!hasValue) {
+                synchronized(this) {
+                    if (!hasValue) {
+                        value = queue.take()
+                        hasValue = true
+                    }
                 }
-                return value as T
             }
+            return value as T
         }
 
         fun awaitCps(cont: SmCont) {
@@ -45,7 +49,9 @@ object StateMachineWithAsync {
     }
 
     class MyDeferredS<T> {
+        @Volatile
         private var hasValue = false
+        @Volatile
         private var value: T? = null
         private val queue = Channel<T>(1)
         private val mutex = Mutex()
@@ -53,13 +59,15 @@ object StateMachineWithAsync {
         suspend fun set(value: T) { queue.send(value) }
 
         suspend fun await(): T {
-            mutex.withLock {
-                if (!hasValue) {
-                    value = queue.receive()
-                    hasValue = true
+            if (!hasValue) {
+                mutex.withLock {
+                    if (!hasValue) {
+                        value = queue.receive()
+                        hasValue = true
+                    }
                 }
-                return value as T
             }
+            return value as T
         }
 
         suspend fun awaitCps(cont: SmCont) {
@@ -101,6 +109,80 @@ object StateMachineWithAsync {
         val v = f2(u)
         val w = v + 3
         w
+    }
+
+    fun CoroutineScope.fBCpsSmTrampoline(x: Int, cont: SmCont) {
+        var completionCont: () -> Unit = { }
+        var completed = false
+        var label: Int = 0
+        val sm = object : SmCont {
+            override fun invoke(input: Any?) {
+                val self = this
+                when (label) {
+                    0 -> {
+                        val y = x + 10
+                        ++label
+                        val dz = f1DB(y)
+                        completionCont = { dz.awaitCps(self) }
+                    }
+                    1 -> {
+                        val z = input as Int
+                        val u = z + 2
+                        ++label
+                        completionCont = { f2Cps(u, self) }
+                    }
+                    2 -> {
+                        val v = input as Int
+                        val w = v + 3
+                        completionCont = {
+                            cont(w)
+                            completed = true
+                        }
+                    }
+                }
+            }
+        }
+        sm(null)
+        while (!completed) {
+            completionCont()
+        }
+    }
+
+    suspend fun fSCpsSmTrampoline(x: Int, cont: SmCont) = coroutineScope {
+        var completionCont: suspend () -> Unit = { }
+        var completed = false
+        var label: Int = 0
+        val sm = object : SmCont {
+            override fun invoke(input: Any?) {
+                val self = this
+                when (label) {
+                    0 -> {
+                        val y = x + 10
+                        ++label
+                        val dz = f1DS(y)
+                        completionCont = { dz.awaitCps(self) }
+                    }
+                    1 -> {
+                        val z = input as Int
+                        val u = z + 2
+                        ++label
+                        completionCont = { f2Cps(u, self) }
+                    }
+                    2 -> {
+                        val v = input as Int
+                        val w = v + 3
+                        completionCont = {
+                            cont(w)
+                            completed = true
+                        }
+                    }
+                }
+            }
+        }
+        sm(null)
+        while (!completed) {
+            completionCont()
+        }
     }
 
     fun CoroutineScope.fBCpsSmLaunch(x: Int, cont: SmCont) {
@@ -168,10 +250,20 @@ object StateMachineWithAsync {
     @JvmStatic
     fun main(args: Array<String>) {
         println("fB: Direct style -- MyDeferredB")
+        // Dispatchers.Default needed because otherwise single thread is blocked by queue
+        // operation in MyDeferredB
         runBlocking(Dispatchers.Default) { println(fB(1)) }
 
         println("fS: Direct style -- MyDeferredS")
-        runBlocking(Dispatchers.Default) { println(fS(1)) }
+        runBlocking { println(fS(1)) }
+
+        // Dispatchers.Default needed because otherwise single thread is blocked by queue
+        // operation in MyDeferredB
+        println("fBCpsSmTrampoline: state machine with trampoline -- MyDeferredB")
+        runBlocking(Dispatchers.Default) { fBCpsSmTrampoline(1, finalCont) }
+
+        println("fSCpsSmTrampoline: state machine with trampoline -- MyDeferredS")
+        runBlocking { fSCpsSmTrampoline(1, finalCont) }
 
         println("fBCpsSmLaunch: state machine with launch -- MyDeferredB")
         runBlocking { fBCpsSmLaunch(1, finalCont) }

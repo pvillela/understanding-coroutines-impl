@@ -70,6 +70,45 @@ object StateMachineWithLoop {
     }
 
     // Reuses the same state machine instance at each step. Shallow stack.
+    fun fCpsSmTrampoline(x: Int, cont: SmCont) {
+        var completionCont: () -> Unit = { }
+        var completed = false
+        var label = 0
+        val y = x + 10
+        var i0 = 0
+        val sm = object : SmCont {
+            override fun invoke(input: Any?) {
+                when (label) {
+                    0 -> {
+                        val z0 = input as Int
+                        ++i0
+                        if (i0 == 10_000) ++label
+                        completionCont = { f1Cps(y + z0, this) }
+                    }
+                    1 -> {
+                        val z = input as Int
+                        val u = z + 2
+                        ++label
+                        completionCont = { f2Cps(u, this) }
+                    }
+                    2 -> {
+                        val v = input as Int
+                        val w = v + 3
+                        completionCont = {
+                            cont(w)
+                            completed = true
+                        }
+                    }
+                }
+            }
+        }
+        sm(0)
+        while (!completed) {
+            completionCont()
+        }
+    }
+
+    // Reuses the same state machine instance at each step. Shallow stack.
     fun CoroutineScope.fCpsSmLaunch(x: Int, cont: SmCont) {
         var label = 0
         var i0 = 0
@@ -147,6 +186,9 @@ object StateMachineWithLoop {
         } catch (e: StackOverflowError) {
             println(e)
         }
+
+        println("fCpsSmTrampoline: state machcine with trampoline")
+        fCpsSmTrampoline(1, finalCont)
 
         println("fCpsSmLaunch: state machine with launch -- runBlocking")
         runBlocking { fCpsSmLaunch(1, finalCont) }
