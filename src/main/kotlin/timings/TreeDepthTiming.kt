@@ -43,10 +43,11 @@ fun treeDepthRecursiveWithYield(t: Tree?): Int = runBlocking {
 
 
 fun main() {
-    val n = 1_000_000
+//    val n = 1_000_000
+//    val tree = deepTree(n)
 
-    val tree = deepTree(n)
-//    val tree = balancedTree(n)
+    val n = 28
+    val tree = balancedTree(n)
 
     println("n = $n")
 
