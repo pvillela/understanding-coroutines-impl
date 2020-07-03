@@ -32,6 +32,19 @@ fun fibRecursive(n: Long): Long =
             n1 + n2
         }
 
+fun fibTailRec(n: Long): Long {
+    tailrec fun fib0(acc: Pair<Long, Long>, n: Long): Pair<Long, Long> =
+            if (n <= 1) {
+                acc
+            } else {
+                val (n1, n2) = acc
+                val n1Next = n1 + n2
+                val n2Next = n1
+                fib0(Pair(n1Next, n2Next), n - 1)
+            }
+    return fib0(Pair(1, 0), n).first
+}
+
 fun fibTrampoline(n: Long): Trampoline<Long> =
         if (n <= 1)
             done(n)
@@ -67,7 +80,7 @@ fun fibRecursiveWithYield(n: Long): Long = runBlocking {
 
 
 fun main() {
-    val n = 40L
+    val n = 10L
 
     println("n = $n")
 
@@ -86,6 +99,16 @@ fun main() {
         }
     }
     println(fibRecursiveTime)
+
+    println("fibTailRec")
+    val fibTailRecTime = measureTimeMillis {
+        try {
+            println(fibTailRec(n))
+        } catch (e: StackOverflowError) {
+            println(e)
+        }
+    }
+    println(fibTailRecTime)
 
     println("fibRecursiveWithYield")
     val fibRecursiveWithYieldTime = measureTimeMillis {
