@@ -51,7 +51,7 @@ object DeepRecursionWithManualTrampoline {
     fun depthCpsSmTrampoline(t: Tree?, cont: SmCont) {
         var resumeThunk: () -> Unit = { }
         var completed = false
-        fun depthCpsSmTrampoline0(t: Tree?, cont: SmCont) {
+        fun depth0(t: Tree?, cont: SmCont) {
             if (t == null) {
                 resumeThunk = { cont(0) }
             } else {
@@ -63,12 +63,12 @@ object DeepRecursionWithManualTrampoline {
                         when (label) {
                             0 -> {
                                 ++label
-                                resumeThunk = { depthCpsSmTrampoline0(t.left, this) }
+                                resumeThunk = { depth0(t.left, this) }
                             }
                             1 -> {
                                 resL = input as Int
                                 ++label
-                                resumeThunk = { depthCpsSmTrampoline0(t.right, this) }
+                                resumeThunk = { depth0(t.right, this) }
                             }
                             2 -> {
                                 resR = input as Int
@@ -85,7 +85,7 @@ object DeepRecursionWithManualTrampoline {
             cont(x)
             completed = true
         }
-        depthCpsSmTrampoline0(t, finalCont)
+        depth0(t, finalCont)
         do {
             resumeThunk()
         } while (!completed)

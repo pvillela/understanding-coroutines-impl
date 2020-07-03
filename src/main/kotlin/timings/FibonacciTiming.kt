@@ -2,6 +2,7 @@ package timings
 
 import coroutinesdesign.DeepRecursionOriginal.DeepRecursiveFunction
 import coroutinesdesign.DeepRecursionOriginal.invoke
+import coroutinesdesign.SmCont
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.yield
 import trampoline.Trampoline
@@ -45,14 +46,19 @@ fun fibTailRec(n: Long): Long {
     return fib0(Pair(1, 0), n).first
 }
 
-fun fibTrampoline(n: Long): Trampoline<Long> =
-        if (n <= 1)
-            done(n)
-        else delay { fibTrampoline(n - 1) }.flatMap { n1 ->
-            fibTrampoline(n - 2).flatMap { n2 ->
-                done(n1 + n2)
+fun fibRecursiveWithYield(n: Long): Long = runBlocking {
+    suspend fun fib0(n: Long): Long =
+            if (n <= 1) {
+                n
+            } else {
+                yield()
+                val n1 = fibRecursive(n - 1)
+                yield()
+                val n2 = fibRecursive(n - 2)
+                n1 + n2
             }
-        }
+    fib0(n)
+}
 
 val fibDeepRecursive = DeepRecursiveFunction<Long, Long> { n ->
     if (n <= 1) {
@@ -64,23 +70,63 @@ val fibDeepRecursive = DeepRecursiveFunction<Long, Long> { n ->
     }
 }
 
-fun fibRecursiveWithYield(n: Long): Long = runBlocking {
-    suspend fun fibRecursiveWithYield0(n: Long): Long =
-            if (n <= 1) {
-                n
-            } else {
-                yield()
-                val n1 = fibRecursive(n - 1)
-                yield()
-                val n2 = fibRecursive(n - 2)
-                n1 + n2
+fun fibManualTrampoline(n: Long): Long {
+    var resumeThunk: () -> Unit = { }
+    var completed = false
+    fun fib0(n: Long, cont: SmCont) {
+        if (n <= 1) {
+            resumeThunk = { cont(n) }
+        } else {
+            val sm = object : SmCont {
+                var label = 0
+                var n1: Long? = null
+                var n2: Long? = null
+                override fun invoke(input: Any?) {
+                    when (label) {
+                        0 -> {
+                            ++label
+                            resumeThunk = { fib0(n - 1, this) }
+                        }
+                        1 -> {
+                            n1 = input as Long
+                            ++label
+                            resumeThunk = { fib0(n - 2, this) }
+                        }
+                        2 -> {
+                            n2 = input as Long
+                            val res = n1!! + n2!!
+                            resumeThunk = { cont(res) }
+                        }
+                    }
+                }
             }
-    fibRecursiveWithYield0(n)
+            sm(null)
+        }
+    }
+    var ret: Long? = null
+    val finalCont: SmCont = { x ->
+        ret = x as Long?
+        completed = true
+    }
+    fib0(n, finalCont)
+    do {
+        resumeThunk()
+    } while (!completed)
+    return ret!!
 }
+
+fun fibTrampoline(n: Long): Trampoline<Long> =
+        if (n <= 1)
+            done(n)
+        else delay { fibTrampoline(n - 1) }.flatMap { n1 ->
+            fibTrampoline(n - 2).flatMap { n2 ->
+                done(n1 + n2)
+            }
+        }
 
 
 fun main() {
-    val n = 10L
+    val n = 50L
 
     println("n = $n")
 
@@ -121,6 +167,12 @@ fun main() {
         println(fibDeepRecursive(n))
     }
     println(fibDeepRecursiveTime)
+
+    println("fibManualTrampoline")
+    val fibManualTrampolineTime = measureTimeMillis {
+        println(fibManualTrampoline(n))
+    }
+    println(fibManualTrampolineTime)
 
     println("fibTrampoline")
     val fibTrampolineTime = measureTimeMillis {
