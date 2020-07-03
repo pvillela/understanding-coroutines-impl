@@ -24,4 +24,12 @@ object DeepRecursionCommon {
                 null
             else
                 Tree(narrowTree(depth - 1, true), narrowTree(depth - 1, false))
+
+    fun balancedTree(depth: Int): Tree? =
+            if (depth == 0)
+                null
+            else
+                generateSequence(Tree(null, null)) { prev ->
+                    Tree(prev, prev)
+                }.take(depth).last()
 }

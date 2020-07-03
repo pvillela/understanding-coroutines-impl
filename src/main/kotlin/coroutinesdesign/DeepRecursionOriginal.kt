@@ -13,7 +13,7 @@ import kotlin.system.measureTimeMillis
 /**
  * Original code from https://medium.com/@elizarov/deep-recursion-with-coroutines-7c53e15993e3.
  */
-object DeepRecursiveOriginal {
+object DeepRecursionOriginal {
 
     class Tree(val left: Tree?, val right: Tree?)
 

@@ -71,7 +71,7 @@ object StateMachineWithLoop {
 
     // Reuses the same state machine instance at each step. Shallow stack.
     fun fCpsSmTrampoline(x: Int, cont: SmCont) {
-        var currentCont: () -> Unit = { }
+        var resumeThunk: () -> Unit = { }
         var completed = false
         val sm = object : SmCont {
             var label = 0
@@ -83,18 +83,18 @@ object StateMachineWithLoop {
                         val z0 = input as Int
                         ++i0
                         if (i0 == 10_000) ++label
-                        currentCont = { f1Cps(y + z0, this) }
+                        resumeThunk = { f1Cps(y + z0, this) }
                     }
                     1 -> {
                         val z = input as Int
                         val u = z + 2
                         ++label
-                        currentCont = { f2Cps(u, this) }
+                        resumeThunk = { f2Cps(u, this) }
                     }
                     2 -> {
                         val v = input as Int
                         val w = v + 3
-                        currentCont = {
+                        resumeThunk = {
                             cont(w)
                             completed = true
                         }
@@ -104,7 +104,7 @@ object StateMachineWithLoop {
         }
         sm(0)
         while (!completed) {
-            currentCont()
+            resumeThunk()
         }
     }
 

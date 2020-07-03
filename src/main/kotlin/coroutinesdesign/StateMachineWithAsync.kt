@@ -112,7 +112,7 @@ object StateMachineWithAsync {
     }
 
     fun CoroutineScope.fBCpsSmTrampoline(x: Int, cont: SmCont) {
-        var currentCont: () -> Unit = { }
+        var resumeThunk: () -> Unit = { }
         var completed = false
         val sm = object : SmCont {
             var label: Int = 0
@@ -123,18 +123,18 @@ object StateMachineWithAsync {
                         val y = x + 10
                         ++label
                         val dz = f1DB(y)
-                        currentCont = { dz.awaitCps(self) }
+                        resumeThunk = { dz.awaitCps(self) }
                     }
                     1 -> {
                         val z = input as Int
                         val u = z + 2
                         ++label
-                        currentCont = { f2Cps(u, self) }
+                        resumeThunk = { f2Cps(u, self) }
                     }
                     2 -> {
                         val v = input as Int
                         val w = v + 3
-                        currentCont = {
+                        resumeThunk = {
                             cont(w)
                             completed = true
                         }
@@ -144,12 +144,12 @@ object StateMachineWithAsync {
         }
         sm(null)
         while (!completed) {
-            currentCont()
+            resumeThunk()
         }
     }
 
     suspend fun fSCpsSmTrampoline(x: Int, cont: SmCont) = coroutineScope {
-        var currentCont: suspend () -> Unit = { }
+        var resumeThunk: suspend () -> Unit = { }
         var completed = false
         val sm = object : SmCont {
             var label: Int = 0
@@ -160,18 +160,18 @@ object StateMachineWithAsync {
                         val y = x + 10
                         ++label
                         val dz = f1DS(y)
-                        currentCont = { dz.awaitCps(self) }
+                        resumeThunk = { dz.awaitCps(self) }
                     }
                     1 -> {
                         val z = input as Int
                         val u = z + 2
                         ++label
-                        currentCont = { f2Cps(u, self) }
+                        resumeThunk = { f2Cps(u, self) }
                     }
                     2 -> {
                         val v = input as Int
                         val w = v + 3
-                        currentCont = {
+                        resumeThunk = {
                             cont(w)
                             completed = true
                         }
@@ -181,7 +181,7 @@ object StateMachineWithAsync {
         }
         sm(null)
         while (!completed) {
-            currentCont()
+            resumeThunk()
         }
     }
 

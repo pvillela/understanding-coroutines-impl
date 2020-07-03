@@ -49,11 +49,11 @@ object DeepRecursionWithManualTrampoline {
     }
 
     fun depthCpsSmTrampoline(t: Tree?, cont: SmCont) {
-        var currentCont: () -> Unit = { }
+        var resumeThunk: () -> Unit = { }
         var completed = false
         fun depthCpsSmTrampoline0(t: Tree?, cont: SmCont) {
             if (t == null) {
-                currentCont = { cont(0) }
+                resumeThunk = { cont(0) }
             } else {
                 val sm = object : SmCont {
                     var label = 0
@@ -63,17 +63,17 @@ object DeepRecursionWithManualTrampoline {
                         when (label) {
                             0 -> {
                                 ++label
-                                currentCont = { depthCpsSmTrampoline0(t.left, this) }
+                                resumeThunk = { depthCpsSmTrampoline0(t.left, this) }
                             }
                             1 -> {
                                 resL = input as Int
                                 ++label
-                                currentCont = { depthCpsSmTrampoline0(t.right, this) }
+                                resumeThunk = { depthCpsSmTrampoline0(t.right, this) }
                             }
                             2 -> {
                                 resR = input as Int
                                 val res = maxOf(resL!!, resR!!) + 1
-                                currentCont = { cont(res) }
+                                resumeThunk = { cont(res) }
                             }
                         }
                     }
@@ -87,7 +87,7 @@ object DeepRecursionWithManualTrampoline {
         }
         depthCpsSmTrampoline0(t, finalCont)
         do {
-            currentCont()
+            resumeThunk()
         } while (!completed)
     }
 
