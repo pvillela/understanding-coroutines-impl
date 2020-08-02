@@ -29,6 +29,11 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:${properties["coroutines_jdk8"]}")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-debug:1.3.7")
 
+    implementation("ch.qos.logback:logback-classic:1.0.13")
+
+    // Enable ues of worksheets
+    implementation(kotlin("script-runtime"))
+
     // Use the Kotlin test library.
     testImplementation("org.jetbrains.kotlin:kotlin-test")
 
